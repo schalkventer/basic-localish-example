@@ -1,34 +1,36 @@
 import { type $brand } from "zod";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useListRecipes, useSingleRecipe } from "./data";
+import { useIsFetching } from "@tanstack/react-query";
 
 const PAGINATION = 20;
 
 export const App = () => {
-  const debouncing = useRef<number | null>(null);
-
-  const [debounced, setDebounced] = useState<string>("");
   const [search, setSearch] = useState<string>("");
 
   const [selected, setSelected] = useState<
     null | (string & $brand<"RECIPE_ID">)
   >(null);
 
-  const viewing = useSingleRecipe(selected);
-  const { list, getNextPage } = useListRecipes({ search: debounced });
+  const { recipe: viewing, syncing: recipeSyncing } = useSingleRecipe(selected);
 
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(event.target.value);
-    if (debouncing.current) clearTimeout(debouncing.current);
+  const { list, syncing: listSyncing } = useListRecipes({
+    search,
+    limit: PAGINATION,
+    offset: 0,
+  });
 
-    debouncing.current = window.setTimeout(() => {
-      setDebounced(event.target.value);
-    }, 2000);
-  };
+  const syncing = recipeSyncing || listSyncing;
 
   return (
     <>
-      <input placeholder="Search" onChange={handleSearch} value={search} />
+      <div>{syncing ? "Syncing..." : "Idle"}</div>
+
+      <input
+        placeholder="Search"
+        onChange={(e) => setSearch(e.target.value)}
+        value={search}
+      />
 
       <ul>
         {!list &&
@@ -52,15 +54,6 @@ export const App = () => {
           );
         })}
       </ul>
-
-      <button
-        disabled={!getNextPage}
-        onClick={() => {
-          if (getNextPage) getNextPage();
-        }}
-      >
-        LOAD MORE
-      </button>
 
       <dialog
         open={selected !== null}

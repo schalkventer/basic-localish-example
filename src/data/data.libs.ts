@@ -1,14 +1,7 @@
 import { type $brand } from "zod";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { createCollection } from "@tanstack/react-db";
 import { QueryClient } from "@tanstack/react-query";
-import { getSingle } from "./data.api";
-
-import {
-  parseLoadSubsetOptions,
-  type QueryCollectionUtils,
-} from "@tanstack/query-db-collection";
 
 import {
   BrowserCollectionCoordinator,
@@ -56,50 +49,8 @@ export type Recipe = {
 export const collection = createCollection(
   persistedCollectionOptions<Recipe, Recipe["id"]>({
     persistence,
-    ...queryCollectionOptions({
-      id: "recipes",
-      queryClient,
-      syncMode: "on-demand",
-      getKey: (x) => x.id,
-      refetchInterval: 20 * 1000,
-
-      queryKey: (options) => {
-        const { filters } = parseLoadSubsetOptions(options);
-
-        const { value: id } = filters?.find(
-          (x) => x.operator === "eq" && x.field[0] === "id",
-        ) || { value: null };
-
-        return ["recipes", id];
-      },
-
-      queryFn: async (ctx): Promise<Recipe[]> => {
-        const selected = ctx.queryKey[1] as string | null;
-        const response = await getSingle({ id: selected! });
-
-        const inner: Recipe = {
-          id: response.id,
-          author: response.author,
-          category: response.category,
-          title: response.title,
-          image: response.image_url,
-          ingredients: response.ingredients,
-          instructions: response.instructions,
-          times: {
-            cook: response.cook_time,
-            prep: response.prep_time,
-            total: response.total_time,
-          },
-        };
-
-        return [inner];
-      },
-
-      onDelete: async (_) => {},
-      onInsert: async (_) => {},
-      onUpdate: async (_) => {},
-    }),
+    id: "recipes",
+    syncMode: "on-demand",
+    getKey: (x) => x.id,
   }),
 );
-
-export const utils = collection.utils as QueryCollectionUtils<Recipe>;
